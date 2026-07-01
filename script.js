@@ -4,8 +4,6 @@ const pageTitle = document.getElementById("pageTitle");
 const imageInput = document.getElementById("imageInput");
 const widthInput = document.getElementById("widthInput");
 const heightInput = document.getElementById("heightInput");
-const spaceWidthInput = document.getElementById("spaceWidthInput");
-const spaceHeightInput = document.getElementById("spaceHeightInput");
 const setupPageSizeSelect = document.getElementById("setupPageSize");
 const pageSizeSelect = setupPageSizeSelect;
 const startEditorButton = document.getElementById("startEditorButton");
@@ -85,9 +83,9 @@ function syncPageTitles() {
     });
 }
 
-[widthInput, heightInput, spaceWidthInput, spaceHeightInput].forEach((element) => {
-    element.addEventListener("input", updatePreview);
+[widthInput, heightInput].forEach((element) => {
     element.addEventListener("change", updatePreview);
+    element.addEventListener("blur", updatePreview);
 });
 
 pageSizeSelect.addEventListener("change", () => {
@@ -129,8 +127,6 @@ async function handleImageUpload(event) {
 
     const widthCM = parseFloat(widthInput.value);
     const heightCM = parseFloat(heightInput.value);
-    const spaceWidth = parseFloat(spaceWidthInput.value);
-    const spaceHeight = parseFloat(spaceHeightInput.value);
     const pageSize = pageSizeSelect.value;
 
     const dimensions = getPageDimensions(pageSize);
@@ -145,7 +141,7 @@ async function handleImageUpload(event) {
         if (activePage.images.length + newImages.length >= 200) break;
 
         const imgData = await resizeImage(files[i], widthCM, heightCM);
-        const placement = createPlacementForImage(files[i], imgData, currentCount + newImages.length, widthCM, heightCM, spaceWidth, spaceHeight);
+        const placement = createPlacementForImage(files[i], imgData, currentCount + newImages.length, widthCM, heightCM);
         newImages.push(placement);
     }
 
@@ -155,9 +151,9 @@ async function handleImageUpload(event) {
     renderImages();
 }
 
-function createPlacementForImage(file, imageData, index, widthCM, heightCM, spaceWidth, spaceHeight) {
+function createPlacementForImage(file, imageData, index, widthCM, heightCM) {
     const marginCm = 0.8;
-    const maxCols = Math.max(1, Math.floor((state.pageWidthCm - marginCm * 2) / (widthCM + spaceWidth)));
+    const maxCols = Math.max(1, Math.floor((state.pageWidthCm - marginCm * 2) / (widthCM + 0.5)));
     const col = index % maxCols;
     const row = Math.floor(index / maxCols);
 
@@ -165,8 +161,8 @@ function createPlacementForImage(file, imageData, index, widthCM, heightCM, spac
         id: createId(),
         file,
         imageData,
-        xCm: marginCm + col * (widthCM + spaceWidth),
-        yCm: marginCm + row * (heightCM + spaceHeight),
+        xCm: marginCm + col * (widthCM + 0.5),
+        yCm: marginCm + row * (heightCM + 0.5),
         widthCm: widthCM,
         heightCm: heightCM,
     };
@@ -287,6 +283,11 @@ function renderImages() {
         item.appendChild(previewImg);
         item.appendChild(handle);
         item.addEventListener("pointerdown", (event) => startInteraction(event, image.id));
+        item.addEventListener("dblclick", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            autoFitSelectedImage(image.id);
+        });
         pageContent.appendChild(item);
     });
 }
@@ -308,7 +309,7 @@ function updatePreview() {
 
     if (Number.isNaN(widthCM) || Number.isNaN(heightCM)) return;
 
-    applyDimensionsToSelectedImage(widthCM, heightCM);
+    applyDimensionsToActivePage(widthCM, heightCM);
     renderImages();
 }
 
@@ -377,18 +378,17 @@ function selectImage(imageId) {
     renderImages();
 }
 
-function applyDimensionsToSelectedImage(widthCM, heightCM) {
-    if (!state.selectedImageId) return;
-
+function applyDimensionsToActivePage(widthCM, heightCM) {
     const activePage = state.pages.find((page) => page.id === state.activePageId) || state.pages[0];
-    const selected = activePage.images.find((image) => image.id === state.selectedImageId);
-    if (!selected) return;
+    if (!activePage || activePage.images.length === 0) return;
 
-    selected.widthCm = clamp(widthCM, 0.5, state.pageWidthCm);
-    selected.heightCm = clamp(heightCM, 0.5, state.pageHeightCm);
+    activePage.images.forEach((image) => {
+        image.widthCm = clamp(widthCM, 0.5, state.pageWidthCm);
+        image.heightCm = clamp(heightCM, 0.5, state.pageHeightCm);
+    });
 
-    widthInput.value = selected.widthCm.toFixed(1);
-    heightInput.value = selected.heightCm.toFixed(1);
+    widthInput.value = widthCM.toFixed(1);
+    heightInput.value = heightCM.toFixed(1);
 }
 
 function deselectImage() {
@@ -407,6 +407,41 @@ function removeSelectedImage() {
 
 function updateSelectionUI() {
     deleteImageButton.disabled = !state.selectedImageId;
+}
+
+function autoFitSelectedImage(imageId) {
+    const activePage = state.pages.find((page) => page.id === state.activePageId) || state.pages[0];
+    const image = activePage?.images.find((item) => item.id === imageId);
+    if (!image) return;
+
+    selectImage(imageId);
+
+    const marginCm = 0.8;
+    const maxWidth = Math.max(1, state.pageWidthCm - marginCm * 2);
+    const maxHeight = Math.max(1, state.pageHeightCm - marginCm * 2);
+    const aspectRatio = image.widthCm / image.heightCm || 1;
+
+    let widthCm = image.widthCm;
+    let heightCm = image.heightCm;
+
+    if (widthCm > maxWidth) {
+        widthCm = maxWidth;
+        heightCm = widthCm / aspectRatio;
+    }
+
+    if (heightCm > maxHeight) {
+        heightCm = maxHeight;
+        widthCm = heightCm * aspectRatio;
+    }
+
+    image.widthCm = clamp(widthCm, 0.5, state.pageWidthCm);
+    image.heightCm = clamp(heightCm, 0.5, state.pageHeightCm);
+    image.xCm = clamp((state.pageWidthCm - image.widthCm) / 2, 0, state.pageWidthCm - image.widthCm);
+    image.yCm = clamp((state.pageHeightCm - image.heightCm) / 2, 0, state.pageHeightCm - image.heightCm);
+
+    widthInput.value = image.widthCm.toFixed(1);
+    heightInput.value = image.heightCm.toFixed(1);
+    renderImages();
 }
 
 function clamp(value, min, max) {
