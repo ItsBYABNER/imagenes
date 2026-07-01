@@ -9,11 +9,32 @@
 </head>
 
 <body class="op-mode">
+    <div class="modal-backdrop" id="setupModal">
+        <div class="modal-card">
+            <h2>Configuración de la página</h2>
+            <p>Elige el tamaño de las páginas para comenzar a organizar tus imágenes.</p>
+            <label class="field">
+                <span>Tamaño de página</span>
+                <select id="setupPageSize">
+                    <option value="letter" selected>Carta (21.59 × 27.94 cm)</option>
+                    <option value="a4">A4 (21 × 29.7 cm)</option>
+                    <option value="a3">A3 (29.7 × 42 cm)</option>
+                    <option value="a5">A5 (14.8 × 21 cm)</option>
+                    <option value="legal">Legal (21.59 × 35.56 cm)</option>
+                    <option value="tabloid">Tabloide (27.94 × 43.18 cm)</option>
+                    <option value="executive">Ejecutivo (18.41 × 26.67 cm)</option>
+                    <option value="b4">B4 (25.0 × 35.3 cm)</option>
+                    <option value="b5">B5 (17.6 × 25.0 cm)</option>
+                </select>
+            </label>
+            <button class="primary-button" id="startEditorButton" type="button">Continuar</button>
+        </div>
+    </div>
+
     <main class="app-shell">
         <section class="panel">
             <div class="panel-header">
-                <h2>Capacidad Máxima: 200 imágenes</h2>
-                <p>Organiza tus imágenes y descarga un PDF listo para imprimir.</p>
+                <h2>Organiza tus imágenes y descarga un PDF listo para imprimir.</h2>
             </div>
 
             <label class="file-field">
@@ -24,39 +45,46 @@
             <div class="form-grid">
                 <label class="field">
                     <span>Ancho imagen (cm)</span>
-                    <input type="number" id="widthInput" value="6" step="0.1" onchange="updatePreview()">
+                    <input type="text" inputmode="decimal" id="widthInput" value="6" step="0.1">
                 </label>
                 <label class="field">
                     <span>Alto imagen (cm)</span>
-                    <input type="number" id="heightInput" value="4" step="0.1" onchange="updatePreview()">
+                    <input type="text" inputmode="decimal" id="heightInput" value="4" step="0.1">
                 </label>
                 <label class="field">
                     <span>Espacio horizontal (cm)</span>
-                    <input type="number" id="spaceWidthInput" value="0.5" step="0.1" onchange="updatePreview()">
+                    <input type="number" id="spaceWidthInput" value="0.5" step="0.1">
                 </label>
                 <label class="field">
                     <span>Espacio vertical (cm)</span>
-                    <input type="number" id="spaceHeightInput" value="0.5" step="0.1" onchange="updatePreview()">
+                    <input type="number" id="spaceHeightInput" value="0.5" step="0.1">
                 </label>
             </div>
 
-            <label class="field">
-                <span>Tamaño de página</span>
-                <select id="pageSize" onchange="updatePreview()">
-                    <option value="a4">A4 (21 × 29.7 cm)</option>
-                    <option value="letter">Letter (21.59 × 27.94 cm)</option>
-                    <option value="a3">A3 (29.7 × 42 cm)</option>
-                    <option value="a5">A5 (14.8 × 21 cm)</option>
-                    <option value="legal">Legal (21.59 × 35.56 cm)</option>
-                    <option value="tabloid">Tabloid (27.94 × 43.18 cm)</option>
-                </select>
-            </label>
+            <div class="actions-row">
+                <button class="primary-button" onclick="generarPDF()">Generar PDF</button>
+                <button class="secondary-button" id="printButton" type="button">Imprimir</button>
+                <button class="secondary-button" id="addPageButton" type="button">Añadir página</button>
+                <button class="secondary-button" id="removePageButton" type="button">Eliminar página</button>
+                <button class="secondary-button" id="deleteImageButton" type="button">Eliminar imagen</button>
+            </div>
 
-            <button class="primary-button" onclick="generarPDF()">Generar PDF</button>
+            <div class="page-nav" id="pageNav"></div>
 
             <div class="preview-section">
-                <h3>Vista previa</h3>
-                <div class="preview-container" id="previewContainer"></div>
+                <div class="preview-header">
+                    <h3>Vista previa de la página</h3>
+                    <p>Haz clic en una imagen para seleccionarla, arrástrala para moverla y usa el controlador inferior
+                        derecho para ajustar su tamaño.</p>
+                </div>
+                <div class="preview-container" id="previewContainer">
+                    <div class="page-preview">
+                        <div class="page-title" id="pageTitle">Página 1</div>
+                        <div class="page-paper" id="pagePaper">
+                            <div class="page-content" id="pageContent"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
